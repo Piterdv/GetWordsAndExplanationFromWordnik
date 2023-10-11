@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
+using System.Text;
 
 namespace GetWordsAndExplanationFromWordnik
 {
@@ -50,9 +51,11 @@ namespace GetWordsAndExplanationFromWordnik
 
                 string path =
                     _config.GetValue<string>("BaseAddressOfWordnikExplanationApi")
-                    + "/" + word 
+                    + "/" + word
                     + _config.GetValue<string>("ApiPathForAskingOfExplanationFromWordnik")
                     + apiKey;
+
+                _log.LogInformation("Path: " + path);
 
                 var response = await client.GetAsync(path);
 
@@ -66,7 +69,12 @@ namespace GetWordsAndExplanationFromWordnik
                     {
                         explanations.Add(explan);
                     }
-                    _log.LogInformation($"{howManyRequests}.\t{word} - {explan.text}");
+
+                    //TODO: wrzuć to do parse
+                    string eou = explan.exampleUses.Count > 0 ? explan.exampleUses[0] : "No example of uses...";
+                    string pos = explan.partOfSpeech != "" ? explan.partOfSpeech : "Unknown part of Speech...";
+
+                    _log.LogInformation($"{howManyRequests}.\t{explan.word} - {explan.text} | {explan.partOfSpeech} | {eou}");
                 }
                 else
                 {
@@ -100,8 +108,8 @@ namespace GetWordsAndExplanationFromWordnik
         {
             try
             {
-                var explain = JsonConvert.DeserializeObject<List<Explanation>>(response);
-                if (explain.Count == 0)
+                var explanation = JsonConvert.DeserializeObject<List<Explanation>>(response);
+                if (explanation.Count == 0)
                 {
                     return new Explanation()
                     {
@@ -109,19 +117,20 @@ namespace GetWordsAndExplanationFromWordnik
                         text = "Problem z pobieraniem definicji słowa:("
                     };
                 }
+
                 return new Explanation()
                 {
                     word = word,
-                    text = explain[0].text,
-                    textProns = explain[0].textProns,
-                    sourceDictionary = explain[0].sourceDictionary,
-                    attributionText = explain[0].attributionText,
-                    partOfSpeech = explain[0].partOfSpeech,
-                    score = explain[0].score,
-                    seqString = explain[0].seqString,
-                    sequence = explain[0].sequence,
-                    exampleUses = explain[0].exampleUses,
-                    relatedWords = explain[0].relatedWords,
+                    text = Helpers.ParseStringFromHtml(explanation[0].text),
+                    textProns = explanation[0].textProns,
+                    sourceDictionary = explanation[0].sourceDictionary,
+                    attributionText = explanation[0].attributionText,
+                    partOfSpeech = explanation[0].partOfSpeech,
+                    score = explanation[0].score,
+                    seqString = explanation[0].seqString,
+                    sequence = explanation[0].sequence,
+                    exampleUses = explanation[0].exampleUses,
+                    relatedWords = explanation[0].relatedWords,
                 };
             }
             catch (Exception ex)
@@ -134,9 +143,5 @@ namespace GetWordsAndExplanationFromWordnik
             }
         }
 
-        private static string prepareString(string str)
-        {
-            return str.Replace("<xref>", "\"").Replace("</xref>", "\"");
-        }
     }
 }
