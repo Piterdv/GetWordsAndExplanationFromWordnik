@@ -15,8 +15,8 @@ namespace GetWordsAndExplanationFromWordnik
 
         public Explanation GetWordAndExplanation()
         {
-            List<string> l = _oneWord.GetWord(true).Result;
-            //List<string> l = new List<string>() { "hello" };
+            //List<string> l = _oneWord.GetWord(true).Result;
+            List<string> l = new List<string>() { "like" };
             Explanation exp = _explanation.GetExplanation(l).Result[0];
             return exp;
         }

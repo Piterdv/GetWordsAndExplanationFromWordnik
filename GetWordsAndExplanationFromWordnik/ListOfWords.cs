@@ -73,6 +73,9 @@ namespace GetWordsAndExplanationFromWordnik
 
         private string ParseWord(string response)
         {
+           //option for json dont use case sensitive
+           //var wordr = JsonConvert.DeserializeObject<Word>(response, new JsonSerializerSettings { ContractResolver = new CamelCasePropertyNamesContractResolver() });
+
             var wordr = JsonConvert.DeserializeObject<Word>(response);
             return wordr.word;
         }

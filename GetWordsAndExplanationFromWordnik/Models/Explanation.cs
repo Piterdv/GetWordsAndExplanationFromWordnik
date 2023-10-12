@@ -4,7 +4,7 @@
     {
         public string attributionText { get; set; } = string.Empty;
         public string attributionUrl { get; set; } = string.Empty;
-        public List<string> citations { get; set; } = new List<string>();
+        public List<Citation> citations { get; set; } = new List<Citation>();
         public List<string> exampleUses { get; set; } = new List<string>();
         public string extendedText { get; set; } = string.Empty;
         public List<string> labels { get; set; } = new List<string>();

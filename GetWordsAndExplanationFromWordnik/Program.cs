@@ -28,7 +28,7 @@ internal class Program
         var host = Host.CreateDefaultBuilder()
             .ConfigureServices((context, services) =>
             {
-                services.AddTransient<IListOfWords, ListOfWords>(); 
+                services.AddTransient<IListOfWords, ListOfWords>();
                 services.AddTransient<IListOfWordsExplanation, ListOfWordsExplanation>();
             })
             .UseSerilog()
@@ -36,6 +36,11 @@ internal class Program
 
         var svc = ActivatorUtilities.CreateInstance<GetAnOneWordAndExplanationFromWordnik>(host.Services);
         svc.GetWordAndExplanation();
+
+#if !DEBUG
+        Console.WriteLine("Press any key to exit");
+        Console.ReadKey();
+#endif
 
     }
 

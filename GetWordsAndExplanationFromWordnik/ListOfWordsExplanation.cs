@@ -2,7 +2,6 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
-using System.Text;
 
 namespace GetWordsAndExplanationFromWordnik
 {
@@ -46,7 +45,6 @@ namespace GetWordsAndExplanationFromWordnik
 
             foreach (var word in selectedWords)
             {
-
                 string apiKey = _config.GetValue<string>("ApiKey") ?? MyAppData.ApiKey;
 
                 string path =
@@ -71,10 +69,13 @@ namespace GetWordsAndExplanationFromWordnik
                     }
 
                     //TODO: wrzuć to do parse
-                    string eou = explan.exampleUses.Count > 0 ? explan.exampleUses[0] : "No example of uses...";
+                    string eou = explan.exampleUses != null && explan.exampleUses.Count > 0 ?
+                        explan.exampleUses[0] : "No example of uses...";
                     string pos = explan.partOfSpeech != "" ? explan.partOfSpeech : "Unknown part of Speech...";
+                    string cit = explan.citations != null && explan.citations.Count > 0 ?
+                        explan.citations[0].cite : "There's no citation...";
 
-                    _log.LogInformation($"{howManyRequests}.\t{explan.word} - {explan.text} | {explan.partOfSpeech} | {eou}");
+                    _log.LogInformation($"{howManyRequests}.\t{explan.word} - {explan.text} | {explan.partOfSpeech} | {eou} | {cit}");
                 }
                 else
                 {
@@ -86,7 +87,12 @@ namespace GetWordsAndExplanationFromWordnik
                     else if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
                     {
                         _log.LogWarning($"Brak definicji w słowniku!");
-                        continue;
+                        if (words.Count > 1) continue;
+                        explanations.Add(new Explanation()
+                        {
+                            word = word,
+                            text = "Brak definicji w słowniku!("
+                        });
                     }
                     else
                     {
@@ -104,6 +110,8 @@ namespace GetWordsAndExplanationFromWordnik
 
         }
 
+        //Domyślnie przerób to na pobieranie listy, chociaż to nie ma sensu, bo i tak pobieramy jedno słowo
+        //ponieważ API wordnika nie pozwala na pobranie więcej niż kilku definicji na raz dla darmowej wersji
         private static Explanation Parse(string response, string word)
         {
             try
@@ -131,6 +139,7 @@ namespace GetWordsAndExplanationFromWordnik
                     sequence = explanation[0].sequence,
                     exampleUses = explanation[0].exampleUses,
                     relatedWords = explanation[0].relatedWords,
+                    citations = explanation[0].citations,
                 };
             }
             catch (Exception ex)
