@@ -5,12 +5,12 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Serilog;
 
-public static class ProgramX
+public class ProgramX
 {
     //add metod to instantiate httpclient for every request
     //internal static HttpClient client = new HttpClient();
 
-    public static void MainX() //string[] args
+    public void MainX() //string[] args
     {
         //nowa configuracja z pliku appsettings.json dla Serilog
         var builder = new ConfigurationBuilder();
@@ -35,7 +35,7 @@ public static class ProgramX
             .Build();
 
         var svc = ActivatorUtilities.CreateInstance<GetWordAndExplanationClass>(host.Services);
-        svc.GetWordAndExplanationOut();
+        svc.GetWordAndExplanationOutConsole();
 
 #if !DEBUG
         Console.WriteLine("Press any key to exit");

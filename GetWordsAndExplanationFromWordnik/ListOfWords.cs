@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
 
 namespace GetWordsAndExplanationFromWordnik
 {
@@ -73,11 +74,8 @@ namespace GetWordsAndExplanationFromWordnik
 
         private string ParseWord(string response)
         {
-           //option for json dont use case sensitive
-           //var wordr = JsonConvert.DeserializeObject<Word>(response, new JsonSerializerSettings { ContractResolver = new CamelCasePropertyNamesContractResolver() });
-
-            var wordr = JsonConvert.DeserializeObject<Word>(response);
-            return wordr.word;
+            var wordr = JsonConvert.DeserializeObject<WordInfo>(response, new JsonSerializerSettings { ContractResolver = new CamelCasePropertyNamesContractResolver() });
+            return wordr.Word;
         }
     }
 }

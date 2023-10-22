@@ -2,13 +2,14 @@
 
 	<PropertyGroup>
 		<OutputType>Exe</OutputType>
+		<CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
 		<TargetFramework>net6.0</TargetFramework>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 		<Company>Piroundsoft </Company>
-		<Authors>Piotr Ludwińsski </Authors>
-		<Version>1.0.3</Version>
-		<Description>Dll do pobierania słówek i ich wytłumzaczeń z wordnik.</Description>
+		<Authors>Piotr Ludwiński </Authors>
+		<Version>1.0.21</Version>
+		<Description>Dll do pobierania słówek i ich opisów z wordnik.</Description>
 	</PropertyGroup>
 
 	<ItemGroup>

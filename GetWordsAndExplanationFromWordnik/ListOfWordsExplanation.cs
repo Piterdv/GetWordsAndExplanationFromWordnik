@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
 
 namespace GetWordsAndExplanationFromWordnik
 {
@@ -63,19 +64,19 @@ namespace GetWordsAndExplanationFromWordnik
                 {
                     var responseString = await response.Content.ReadAsStringAsync();
                     var explan = Parse(responseString, word);
-                    if (!explan.text.Contains("ERROR:"))
+                    if (!explan.Text.Contains("ERROR:"))
                     {
                         explanations.Add(explan);
                     }
 
                     //TODO: wrzuć to do parse
-                    string eou = explan.exampleUses != null && explan.exampleUses.Count > 0 ?
-                        explan.exampleUses[0] : "No example of uses...";
-                    string pos = explan.partOfSpeech != "" ? explan.partOfSpeech : "Unknown part of Speech...";
-                    string cit = explan.citations != null && explan.citations.Count > 0 ?
-                        explan.citations[0].cite : "There's no citation...";
+                    string eou = explan.ExampleUses != null && explan.ExampleUses.Count > 0 ?
+                        explan.ExampleUses[0] : "No example of uses...";
+                    string pos = explan.PartOfSpeech != "" ? explan.PartOfSpeech : "Unknown part of Speech...";
+                    string cit = explan.Citations != null && explan.Citations.Count > 0 ?
+                        explan.Citations[0].Cite : "There's no citation...";
 
-                    _log.LogInformation($"{howManyRequests}.\t{explan.word} - {explan.text} | {explan.partOfSpeech} | {eou} | {cit}");
+                    _log.LogInformation($"{howManyRequests}.\t{explan.Word} - {explan.Text} | {explan.PartOfSpeech} | {eou} | {cit}");
                 }
                 else
                 {
@@ -90,16 +91,16 @@ namespace GetWordsAndExplanationFromWordnik
                         if (words.Count > 1) continue;
                         explanations.Add(new Explanation()
                         {
-                            word = word,
-                            text = "Brak definicji w słowniku!("
+                            Word = word,
+                            Text = "Brak definicji w słowniku!("
                         });
                     }
                     else
                     {
                         explanations.Add(new Explanation()
                         {
-                            word = word,
-                            text = "Problem z pobieraniem definicji słowa:("
+                            Word = word,
+                            Text = "Problem z pobieraniem definicji słowa:("
                         });
                         _log.LogWarning("Problem z pobieraniem definicji słowa: ", word);
                     }
@@ -116,38 +117,38 @@ namespace GetWordsAndExplanationFromWordnik
         {
             try
             {
-                var explanation = JsonConvert.DeserializeObject<List<Explanation>>(response);
+                var explanation = JsonConvert.DeserializeObject<List<Explanation>>(response, new JsonSerializerSettings { ContractResolver = new CamelCasePropertyNamesContractResolver() });
                 if (explanation.Count == 0)
                 {
                     return new Explanation()
                     {
-                        word = word,
-                        text = "Problem z pobieraniem definicji słowa:("
+                        Word = word,
+                        Text = "Problem z pobieraniem definicji słowa:("
                     };
                 }
 
                 return new Explanation()
                 {
-                    word = word,
-                    text = Helpers.ParseStringFromHtml(explanation[0].text),
-                    textProns = explanation[0].textProns,
-                    sourceDictionary = explanation[0].sourceDictionary,
-                    attributionText = explanation[0].attributionText,
-                    partOfSpeech = explanation[0].partOfSpeech,
-                    score = explanation[0].score,
-                    seqString = explanation[0].seqString,
-                    sequence = explanation[0].sequence,
-                    exampleUses = explanation[0].exampleUses,
-                    relatedWords = explanation[0].relatedWords,
-                    citations = explanation[0].citations,
+                    Word = word,
+                    Text = Helpers.ParseStringFromHtml(explanation[0].Text),
+                    TextProns = explanation[0].TextProns,
+                    SourceDictionary = explanation[0].SourceDictionary,
+                    AttributionText = explanation[0].AttributionText,
+                    PartOfSpeech = explanation[0].PartOfSpeech,
+                    Score = explanation[0].Score,
+                    SeqString = explanation[0].SeqString,
+                    Sequence = explanation[0].Sequence,
+                    ExampleUses = explanation[0].ExampleUses,
+                    RelatedWords = explanation[0].RelatedWords,
+                    Citations = explanation[0].Citations,
                 };
             }
             catch (Exception ex)
             {
                 return new Explanation()
                 {
-                    word = word,
-                    text = $"ERROR: {ex.Message}" //?
+                    Word = word,
+                    Text = $"ERROR: {ex.Message}" //?
                 };
             }
         }

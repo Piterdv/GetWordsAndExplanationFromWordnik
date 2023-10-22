@@ -2,22 +2,22 @@
 {
     public class Explanation
     {
-        public string attributionText { get; set; } = string.Empty;
-        public string attributionUrl { get; set; } = string.Empty;
-        public List<Citation> citations { get; set; } = new List<Citation>();
-        public List<string> exampleUses { get; set; } = new List<string>();
-        public string extendedText { get; set; } = string.Empty;
-        public List<string> labels { get; set; } = new List<string>();
-        public List<string> notes { get; set; } = new List<string>();
-        public string partOfSpeech { get; set; } = string.Empty;
-        public List<string> relatedWords { get; set; } = new List<string>();
-        public int score { get; set; } = 0;
-        public string seqString { get; set; } = string.Empty;
-        public string sequence { get; set; } = string.Empty;
-        public string sourceDictionary { get; set; } = string.Empty;
-        public string text { get; set; } = string.Empty;
-        public List<string> textProns { get; set; } = new List<string>();
-        public string word { get; set; } = string.Empty;
+        public string AttributionText { get; set; } = string.Empty;
+        public string AttributionUrl { get; set; } = string.Empty;
+        public List<Citation> Citations { get; set; } = new List<Citation>();
+        public List<string> ExampleUses { get; set; } = new List<string>();
+        public string ExtendedText { get; set; } = string.Empty;
+        public List<string> Labels { get; set; } = new List<string>();
+        public List<string> Notes { get; set; } = new List<string>();
+        public string PartOfSpeech { get; set; } = string.Empty;
+        public List<string> RelatedWords { get; set; } = new List<string>();
+        public int Score { get; set; } = 0;
+        public string SeqString { get; set; } = string.Empty;
+        public string Sequence { get; set; } = string.Empty;
+        public string SourceDictionary { get; set; } = string.Empty;
+        public string Text { get; set; } = string.Empty;
+        public List<string> TextProns { get; set; } = new List<string>();
+        public string Word { get; set; } = string.Empty;
         //public string wordnikUrl { get; set; } = string.Empty;
     }
 }

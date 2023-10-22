@@ -8,7 +8,7 @@ namespace GetWordsAndExplanationFromWordnik.Models
 {
     public class Citation
     {
-        public string source { get; set; }
-        public string cite { get; set; }
+        public string Source { get; set; }
+        public string Cite { get; set; }
     }
 }
