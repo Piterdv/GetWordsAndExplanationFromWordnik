@@ -18,7 +18,7 @@ namespace GetWordsAndExplanationFromWordnik
 
         public ListOfWords(ILogger<ListOfWords> log, IConfiguration config)
         {
-            _log = log; 
+            _log = log;
             _config = config;
         }
 
@@ -35,9 +35,10 @@ namespace GetWordsAndExplanationFromWordnik
                     _config.GetValue<string>("BaseAddressOfWordnikWordsApi")
                     + _config.GetValue<string>("ApiPathForAskingOfWordFromWordnik")
                     + apiKey;
-
+#if DEBUG
                 _log.LogInformation("Path: " + path);
-                
+#endif
+
                 int howManyWords = onlyOneWord ? 1 : _config.GetValue<int>("HowManyWordsGet");
 
                 for (int i = 0; i < howManyWords; i++) //max 9 in free version of API of wordnik

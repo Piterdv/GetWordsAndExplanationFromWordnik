@@ -1,15 +1,15 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<OutputType>Exe</OutputType>
+		<OutputType>Library</OutputType>
 		<CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
 		<TargetFramework>net6.0</TargetFramework>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 		<Company>Piroundsoft </Company>
-		<Authors>Piotr Ludwiński </Authors>
-		<Version>1.0.21</Version>
-		<Description>Dll do pobierania słówek i ich opisów z wordnik.</Description>
+		<Authors>Piotr Ludwiński</Authors>
+		<Version>1.1.35</Version>
+		<Description>Dll do pobierania słówek i ich opisów z wordnik.org.</Description>
 	</PropertyGroup>
 
 	<ItemGroup>

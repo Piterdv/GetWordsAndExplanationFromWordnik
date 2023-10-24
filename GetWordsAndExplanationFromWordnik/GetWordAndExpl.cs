@@ -1,16 +1,21 @@
 ﻿//DI, Serilog, Settings :)
 using GetWordsAndExplanationFromWordnik;
+using GetWordsAndExplanationFromWordnik.Models;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Serilog;
+using System.Reflection;
 
-public class ProgramX
+public class GetWordAndExpl
 {
     //add metod to instantiate httpclient for every request
     //internal static HttpClient client = new HttpClient();
 
-    public void MainX() //string[] args
+    /// <summary>
+    /// Metoda GetWAndE() jest wywoływana z TestyMyDllLibFromDll/Program.cs
+    /// </summary>
+    public Explanation GetWAndE() //string[] args
     {
         //nowa configuracja z pliku appsettings.json dla Serilog
         var builder = new ConfigurationBuilder();
@@ -23,7 +28,8 @@ public class ProgramX
             .WriteTo.File("logs\\log.txt")
             .CreateLogger();
 
-        Log.Logger.Information("----------->>>Starting");
+        var assembly = Assembly.GetExecutingAssembly().GetName().Version.ToString();
+        Log.Logger.Information("----------->>>Starting LIB (R(" + assembly + "))");
 
         var host = Host.CreateDefaultBuilder()
             .ConfigureServices((context, services) =>
@@ -35,9 +41,11 @@ public class ProgramX
             .Build();
 
         var svc = ActivatorUtilities.CreateInstance<GetWordAndExplanationClass>(host.Services);
-        svc.GetWordAndExplanationOutConsole();
+        var expl = svc.GetWordAndExplanationOut();
+        //Console.WriteLine("OUT: " + expl.Text + "|" + expl.Citations);
+        return expl;
 
-#if !DEBUG
+#if DEBUG
         Console.WriteLine("Press any key to exit");
         Console.ReadKey();
 #endif

@@ -7,7 +7,7 @@
         public List<Citation> Citations { get; set; } = new List<Citation>();
         public List<string> ExampleUses { get; set; } = new List<string>();
         public string ExtendedText { get; set; } = string.Empty;
-        public List<string> Labels { get; set; } = new List<string>();
+        //public List<string> Labels { get; set; } = new List<string>();
         public List<string> Notes { get; set; } = new List<string>();
         public string PartOfSpeech { get; set; } = string.Empty;
         public List<string> RelatedWords { get; set; } = new List<string>();

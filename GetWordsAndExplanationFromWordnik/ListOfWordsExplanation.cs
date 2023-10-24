@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
+using System.Text;
 
 namespace GetWordsAndExplanationFromWordnik
 {
@@ -54,7 +55,9 @@ namespace GetWordsAndExplanationFromWordnik
                     + _config.GetValue<string>("ApiPathForAskingOfExplanationFromWordnik")
                     + apiKey;
 
+#if DEBUG
                 _log.LogInformation("Path: " + path);
+#endif
 
                 var response = await client.GetAsync(path);
 
@@ -69,14 +72,7 @@ namespace GetWordsAndExplanationFromWordnik
                         explanations.Add(explan);
                     }
 
-                    //TODO: wrzuć to do parse
-                    string eou = explan.ExampleUses != null && explan.ExampleUses.Count > 0 ?
-                        explan.ExampleUses[0] : "No example of uses...";
-                    string pos = explan.PartOfSpeech != "" ? explan.PartOfSpeech : "Unknown part of Speech...";
-                    string cit = explan.Citations != null && explan.Citations.Count > 0 ?
-                        explan.Citations[0].Cite : "There's no citation...";
-
-                    _log.LogInformation($"{howManyRequests}.\t{explan.Word} - {explan.Text} | {explan.PartOfSpeech} | {eou} | {cit}");
+                    _log.LogInformation($"{howManyRequests}.\t{explan.Word} - {explan.Text} | {explan.PartOfSpeech} | {explan.Citations[0].Cite} | {explan.ExampleUses[0]}");
                 }
                 else
                 {
@@ -113,10 +109,14 @@ namespace GetWordsAndExplanationFromWordnik
 
         //Domyślnie przerób to na pobieranie listy, chociaż to nie ma sensu, bo i tak pobieramy jedno słowo
         //ponieważ API wordnika nie pozwala na pobranie więcej niż kilku definicji na raz dla darmowej wersji
-        private static Explanation Parse(string response, string word)
+        private Explanation Parse(string response, string word)
         {
             try
             {
+                response = response.Replace("(", "").Replace(")", "").Replace(";", "").Replace("/**/", "").Replace("/**", "").Replace("*/", "").Replace("/*", "").Replace("/**/", "").Replace("/**", "").Replace("*/", "").Replace("/*", "").Replace("/**/", "").Replace("/**", "").Replace("*/", "").Replace("/*", "").Replace("/**/", "").Replace("/**", "").Replace("*/", "").Replace("/*", "").Replace("/**/", "").Replace("/**", "").Replace("*/", "").Replace("/*", "").Replace("/**/", "").Replace("/**", "").Replace("*/", "").Replace("/*", "").Replace("/**/", "").Replace("/**", "").Replace("*/", "").Replace("/*", "");
+                response = Encoding.UTF8.GetString(Encoding.Default.GetBytes(response));
+
+
                 var explanation = JsonConvert.DeserializeObject<List<Explanation>>(response, new JsonSerializerSettings { ContractResolver = new CamelCasePropertyNamesContractResolver() });
                 if (explanation.Count == 0)
                 {
@@ -127,6 +127,43 @@ namespace GetWordsAndExplanationFromWordnik
                     };
                 }
 
+                List<string> eou = new List<string>();
+                if (explanation[0].ExampleUses != null && explanation[0].ExampleUses.Count > 0)
+                {
+                    foreach (var item in explanation[0].ExampleUses)
+                    {
+                        eou.Add(Helpers.ParseStringFromHtml(item));
+                    }
+                }
+                else
+                {
+                    eou.Add("No example of uses...");
+                }
+
+                string pos = explanation[0].PartOfSpeech != "" ? explanation[0].PartOfSpeech : "Unknown part of Speech...";
+
+                List<Citation> cit = new List<Citation>();
+                if (explanation[0].Citations != null && explanation[0].Citations.Count > 0)
+                {
+                    foreach (var item in explanation[0].Citations)
+                    {
+                        Citation c = new Citation();
+                        c.Source = item.Source;
+                        c.Cite = Helpers.ParseStringFromHtml(item.Cite);
+                        cit.Add(c);
+                    }
+                }
+                else
+                {
+                    Citation c = new Citation();
+                    c.Source = "?";
+                    c.Cite = "There's no cite...";
+                    cit.Add(c);
+                }
+                //string cit = explanation[0].Citations != null && explanation[0].Citations.Count > 0 ?
+                //    explanation[0].Citations[0].Cite : "There's no citation...";
+
+
                 return new Explanation()
                 {
                     Word = word,
@@ -134,17 +171,21 @@ namespace GetWordsAndExplanationFromWordnik
                     TextProns = explanation[0].TextProns,
                     SourceDictionary = explanation[0].SourceDictionary,
                     AttributionText = explanation[0].AttributionText,
-                    PartOfSpeech = explanation[0].PartOfSpeech,
+                    PartOfSpeech = pos,//explanation[0].PartOfSpeech,
                     Score = explanation[0].Score,
                     SeqString = explanation[0].SeqString,
                     Sequence = explanation[0].Sequence,
-                    ExampleUses = explanation[0].ExampleUses,
+                    ExampleUses = eou, //explanation[0].ExampleUses,
                     RelatedWords = explanation[0].RelatedWords,
-                    Citations = explanation[0].Citations,
+                    Citations = cit,//explanation[0].Citations,
+                                    //Labels = explanation[0].Labels,
+
                 };
             }
             catch (Exception ex)
             {
+                _log.LogError(ex.Message);
+                _log.LogError(response);
                 return new Explanation()
                 {
                     Word = word,

@@ -37,7 +37,7 @@ internal class Program
         var svc = ActivatorUtilities.CreateInstance<GetWordAndExplanationClass>(host.Services);
         svc.GetWordAndExplanationOut();
 
-#if !DEBUG
+#if DEBUG
         Console.WriteLine("Press any key to exit");
         Console.ReadKey();
 #endif
