@@ -3,13 +3,13 @@ using Microsoft.Extensions.Logging;
 
 namespace GetWordsAndExplanationFromWordnik
 {
-    public class GetWordAndExplanationClass
+    public class GetWordAndExplanation
     {
         private readonly IListOfWords _oneWord;
         private readonly IListOfWordsExplanation _explanation;
-        private readonly ILogger<GetWordAndExplanationClass> _logger;
+        private readonly ILogger<GetWordAndExplanation> _logger;
 
-        public GetWordAndExplanationClass(IListOfWords oneWord, IListOfWordsExplanation explanation, ILogger<GetWordAndExplanationClass> logger)
+        public GetWordAndExplanation(IListOfWords oneWord, IListOfWordsExplanation explanation, ILogger<GetWordAndExplanation> logger)
         {
             _oneWord = oneWord;
             _explanation = explanation;
@@ -22,8 +22,8 @@ namespace GetWordsAndExplanationFromWordnik
 
             try
             {
-                l = _oneWord.GetWord(true).Result;
-                //l = new List<string>() { "like" };        //Dużo informacji
+                //l = _oneWord.GetWord(true).Result;
+                l = new List<string>() { "like" };        //Dużo informacji
                 //l = new List<string>() { "nonstatic" };   //problem z Deserialize response, ok z DeserializeObject
                 Explanation exp = _explanation.GetExplanation(l).Result[0];
                 _logger.LogInformation(">>>OK:)");

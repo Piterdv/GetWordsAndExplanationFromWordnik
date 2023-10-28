@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
+using System.Text.RegularExpressions;
 
 namespace GetWordsAndExplanationFromWordnik
 {
@@ -40,6 +41,7 @@ namespace GetWordsAndExplanationFromWordnik
 #endif
 
                 int howManyWords = onlyOneWord ? 1 : _config.GetValue<int>("HowManyWordsGet");
+                int notToMuchBadWords = 0;
 
                 for (int i = 0; i < howManyWords; i++) //max 9 in free version of API of wordnik
                 {
@@ -49,6 +51,14 @@ namespace GetWordsAndExplanationFromWordnik
                     {
                         string responseString = await response.Content.ReadAsStringAsync();
                         string word = ParseWord(responseString);
+
+                        if (word.Contains(":BAD:WORD:") && notToMuchBadWords < 5)
+                        {
+                            notToMuchBadWords++;
+                            i--;
+                            continue;
+                        }
+
                         if (word != null)
                         {
                             wordList.Add(word);
@@ -75,8 +85,26 @@ namespace GetWordsAndExplanationFromWordnik
 
         private string ParseWord(string response)
         {
-            var wordr = JsonConvert.DeserializeObject<WordInfo>(response, new JsonSerializerSettings { ContractResolver = new CamelCasePropertyNamesContractResolver() });
-            return wordr.Word;
+            WordInfo? word;
+
+            try
+            {
+                word = JsonConvert.DeserializeObject<WordInfo>(response, new JsonSerializerSettings { ContractResolver = new CamelCasePropertyNamesContractResolver() });
+            }
+            catch (Exception ex)
+            {
+                _log.LogError("DESERIALIZE WORD - " + ex.Message);
+                return ":BAD:WORD:";
+            }
+
+            if (word.Word == null || !Regex.IsMatch(word.Word, @"^[a-zA-Z-' ]*$"))
+            {
+                string bw = "BAD WORD: " + word.Word + ". I'll try next word to take.";
+                _log.LogError(bw);
+                return ":BAD:WORD:";
+            }
+
+            return word.Word;
         }
     }
 }

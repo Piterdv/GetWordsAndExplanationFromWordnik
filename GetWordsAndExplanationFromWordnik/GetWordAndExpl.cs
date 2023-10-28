@@ -40,16 +40,9 @@ public class GetWordAndExpl
             .UseSerilog()
             .Build();
 
-        var svc = ActivatorUtilities.CreateInstance<GetWordAndExplanationClass>(host.Services);
+        var svc = ActivatorUtilities.CreateInstance<GetWordAndExplanation>(host.Services);
         var expl = svc.GetWordAndExplanationOut();
-        //Console.WriteLine("OUT: " + expl.Text + "|" + expl.Citations);
         return expl;
-
-#if DEBUG
-        Console.WriteLine("Press any key to exit");
-        Console.ReadKey();
-#endif
-
     }
 
     //appsettings.json + more

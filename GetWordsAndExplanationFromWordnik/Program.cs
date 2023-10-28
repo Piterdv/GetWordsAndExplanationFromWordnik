@@ -34,7 +34,7 @@ internal class Program
             .UseSerilog()
             .Build();
 
-        var svc = ActivatorUtilities.CreateInstance<GetWordAndExplanationClass>(host.Services);
+        var svc = ActivatorUtilities.CreateInstance<GetWordAndExplanation>(host.Services);
         svc.GetWordAndExplanationOut();
 
 #if DEBUG
