@@ -18,13 +18,12 @@ namespace GetWordsAndExplanationFromWordnik
 
         public Explanation GetWordAndExplanationOut()
         {
-            List<string> l =new List<string>();
+            List<string> l = new List<string>();
 
             try
             {
-                //l = _oneWord.GetWord(true).Result;
-                l = new List<string>() { "like" };        //Dużo informacji
-                //l = new List<string>() { "nonstatic" };   //problem z Deserialize response, ok z DeserializeObject
+                l = _oneWord.GetWord(true).Result;
+                //l = new List<string>() { "Shakespeare" }; //Dużo informacji //like
                 Explanation exp = _explanation.GetExplanation(l).Result[0];
                 _logger.LogInformation(">>>OK:)");
                 return exp;
@@ -32,7 +31,7 @@ namespace GetWordsAndExplanationFromWordnik
             catch (Exception ex)
             {
                 _logger.LogError(ex.Message);
-                return new Explanation() { Text = "Error", Word = l[0] ?? "Error" };
+                return new Explanation() { Text = new List<string> { "Error" }, Word = l[0] ?? "Error" };
             }
         }
 

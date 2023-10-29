@@ -36,5 +36,27 @@ namespace GetWordsAndExplanationFromWordnik
 
             return sb.ToString();
         }
+
+        /// <summary>
+        /// Pobieram tylko nazwę metody i błąd.
+        /// </summary>
+        /// <param name="ex"></param>
+        /// <returns></returns>
+        public static string GetMethodNameAndError(Exception ex)
+        {
+            string mn = string.Empty;
+            mn += ("({0}): " + ex.Message, System.Reflection.MethodBase.GetCurrentMethod().DeclaringType.Name);
+            return mn;
+        }
+
+        /// <summary>
+        /// Zamienia listę stringów na jeden string, gdzie elementy listy są oddzielone znakiem "|".
+        /// </summary>
+        /// <param name="lst"></param>
+        /// <returns></returns>
+        public static string GetListAsString(List<string> lst)
+        {
+            return lst.Aggregate((i, j) => i + " | " + j);
+        }
     }
 }

@@ -15,7 +15,8 @@
         public string SeqString { get; set; } = string.Empty;
         public string Sequence { get; set; } = string.Empty;
         public string SourceDictionary { get; set; } = string.Empty;
-        public string Text { get; set; } = string.Empty;
+        //public string Text { get; set; } = string.Empty;
+        public List<string> Text { get; set; } = new List<string>();
         public List<string> TextProns { get; set; } = new List<string>();
         public string Word { get; set; } = string.Empty;
         //public string wordnikUrl { get; set; } = string.Empty;

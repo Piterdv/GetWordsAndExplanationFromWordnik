@@ -93,7 +93,7 @@ namespace GetWordsAndExplanationFromWordnik
             }
             catch (Exception ex)
             {
-                _log.LogError("DESERIALIZE WORD - " + ex.Message);
+                _log.LogError("({0}): " + ex.Message, System.Reflection.MethodBase.GetCurrentMethod().DeclaringType.Name);
                 return ":BAD:WORD:";
             }
 

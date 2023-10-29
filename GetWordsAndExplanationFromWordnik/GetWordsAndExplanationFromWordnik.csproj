@@ -8,7 +8,7 @@
 		<Nullable>enable</Nullable>
 		<Company>Piroundsoft </Company>
 		<Authors>Piotr Ludwiński</Authors>
-		<Version>1.1.51</Version>
+		<Version>1.1.73</Version>
 		<Description>Dll do pobierania słówek i ich opisów z wordnik.org.</Description>
 	</PropertyGroup>
 
@@ -24,6 +24,9 @@
 	<ItemGroup>
 		<None Update="appsettings.json">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="shake.json">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</None>
 		<None Update="words.txt">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
