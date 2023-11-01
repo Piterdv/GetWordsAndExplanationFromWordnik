@@ -23,9 +23,15 @@ namespace GetWordsAndExplanationFromWordnik
             try
             {
                 l = _oneWord.GetWord(true).Result;
-                //l = new List<string>() { "Shakespeare" }; //Dużo informacji //like
+                if(l.Contains("Error:"))
+                    return new Explanation() { Text = new List<string> { l[0] }, Word = l[0] ?? "Error" };
+                if (l.Contains("ErrorTMR:"))
+                    return new Explanation() { Text = new List<string> { "Wait a moment before you try new game again, too may request, sorry:)" }, Word = "ErrorTMR" };
+
                 Explanation exp = _explanation.GetExplanation(l).Result[0];
+                
                 _logger.LogInformation(">>>OK:)");
+                
                 return exp;
             }
             catch (Exception ex)

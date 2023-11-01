@@ -65,9 +65,15 @@ namespace GetWordsAndExplanationFromWordnik
                             _log.LogInformation("Word: " + word);
                         }
                     }
+                    else if (response.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
+                    {
+                        _log.LogError("ErrorTMR: " + response.StatusCode);
+                        wordList.Add("ErrorTMR: " + response.StatusCode);
+                    }
                     else
                     {
                         _log.LogError("Error: " + response.StatusCode);
+                        wordList.Add("Error: " + response.StatusCode);
                     }
                 }
             }
