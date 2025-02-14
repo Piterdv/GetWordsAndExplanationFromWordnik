@@ -5,112 +5,111 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 using System.Text.RegularExpressions;
 
-namespace GetWordsAndExplanationFromWordnik
+namespace GetWordsAndExplanationFromWordnik;
+
+public class ListOfWords : IListOfWords
 {
-    public class ListOfWords : IListOfWords
+    //muszę inicjować HttpClienta bo muszę odświeżać połączenie co minutę?
+    //https://stackoverflow.com/questions/40187153/httpclient-getasync-never-returns-when-using-await-async
+    //użyj tylko raz, bo inaczej dostaniesz wyjątek?
+    private static HttpClient client = new HttpClient();
+
+    private readonly ILogger<ListOfWords> _log;
+    private readonly IConfiguration _config;
+
+    public ListOfWords(ILogger<ListOfWords> log, IConfiguration config)
     {
-        //muszę inicjować HttpClienta bo muszę odświeżać połączenie co minutę?
-        //https://stackoverflow.com/questions/40187153/httpclient-getasync-never-returns-when-using-await-async
-        //użyj tylko raz, bo inaczej dostaniesz wyjątek?
-        private static HttpClient client = new HttpClient();
+        _log = log;
+        _config = config;
+    }
 
-        private readonly ILogger<ListOfWords> _log;
-        private readonly IConfiguration _config;
+    public async Task<List<string>> GetWord(bool onlyOneWord = false)
+    {
 
-        public ListOfWords(ILogger<ListOfWords> log, IConfiguration config)
+        var wordList = new List<string>();
+
+        try
         {
-            _log = log;
-            _config = config;
-        }
+            string apiKey = _config.GetValue<string>("ApiKey") ?? MyAppData.ApiKey;
 
-        public async Task<List<string>> GetWord(bool onlyOneWord = false)
-        {
-
-            var wordList = new List<string>();
-
-            try
-            {
-                string apiKey = _config.GetValue<string>("ApiKey") ?? MyAppData.ApiKey;
-
-                string path =
-                    _config.GetValue<string>("BaseAddressOfWordnikWordsApi")
-                    + _config.GetValue<string>("ApiPathForAskingOfWordFromWordnik")
-                    + apiKey;
+            string path =
+                _config.GetValue<string>("BaseAddressOfWordnikWordsApi")
+                + _config.GetValue<string>("ApiPathForAskingOfWordFromWordnik")
+                + apiKey;
 #if DEBUG
-                _log.LogInformation("Path: " + path);
+            _log.LogInformation("Path: " + path);
 #endif
 
-                int howManyWords = onlyOneWord ? 1 : _config.GetValue<int>("HowManyWordsGet");
-                int notToMuchBadWords = 0;
+            int howManyWords = onlyOneWord ? 1 : _config.GetValue<int>("HowManyWordsGet");
+            int notToMuchBadWords = 0;
 
-                for (int i = 0; i < howManyWords; i++) //max 9 in free version of API of wordnik
+            for (int i = 0; i < howManyWords; i++) //max 9 in free version of API of wordnik
+            {
+                var response = await client.GetAsync(path);
+
+                if (response.IsSuccessStatusCode)
                 {
-                    var response = await client.GetAsync(path);
+                    string responseString = await response.Content.ReadAsStringAsync();
+                    string word = ParseWord(responseString);
 
-                    if (response.IsSuccessStatusCode)
+                    if (word.Contains(":BAD:WORD:") && notToMuchBadWords < 5)
                     {
-                        string responseString = await response.Content.ReadAsStringAsync();
-                        string word = ParseWord(responseString);
-
-                        if (word.Contains(":BAD:WORD:") && notToMuchBadWords < 5)
-                        {
-                            notToMuchBadWords++;
-                            i--;
-                            continue;
-                        }
-
-                        if (word != null)
-                        {
-                            wordList.Add(word);
-                            _log.LogInformation("Word: " + word);
-                        }
+                        notToMuchBadWords++;
+                        i--;
+                        continue;
                     }
-                    else if (response.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
+
+                    if (word != null)
                     {
-                        _log.LogError("ErrorTMR: " + response.StatusCode);
-                        wordList.Add("ErrorTMR: " + response.StatusCode);
-                    }
-                    else
-                    {
-                        _log.LogError("Error: " + response.StatusCode);
-                        wordList.Add("Error: " + response.StatusCode);
+                        wordList.Add(word);
+                        _log.LogInformation("Word: " + word);
                     }
                 }
+                else if (response.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
+                {
+                    _log.LogError("ErrorTMR: " + response.StatusCode);
+                    wordList.Add("ErrorTMR: " + response.StatusCode);
+                }
+                else
+                {
+                    _log.LogError("Error: " + response.StatusCode);
+                    wordList.Add("Error: " + response.StatusCode);
+                }
             }
-            catch (HttpRequestException e)
-            {
-                _log.LogError(e.Message);
-            }
-            catch (Exception ex)
-            {
-                _log.LogError(ex.Message);
-            }
-
-            return wordList;
         }
-
-        private string ParseWord(string response)
+        catch (HttpRequestException e)
         {
-            WordInfo? word;
-
-            try
-            {
-                word = JsonConvert.DeserializeObject<WordInfo>(response, new JsonSerializerSettings { ContractResolver = new CamelCasePropertyNamesContractResolver() });
-            }
-            catch (Exception ex)
-            {
-                _log.LogError("({0}): " + ex.Message, System.Reflection.MethodBase.GetCurrentMethod().DeclaringType.Name);
-                return ":BAD:WORD:";
-            }
-
-            if (word.Word == null || !Regex.IsMatch(word.Word, @"^[a-zA-Z-' ]*$"))
-            {
-                string bw = "BAD WORD: " + word.Word + ". I'll try next word to take.";
-                _log.LogError(bw);
-                return ":BAD:WORD:";
-            }
-
-            return word.Word;
+            _log.LogError(e.Message);
         }
+        catch (Exception ex)
+        {
+            _log.LogError(ex.Message);
+        }
+
+        return wordList;
+    }
+
+    private string ParseWord(string response)
+    {
+        WordInfo? word;
+
+        try
+        {
+            word = JsonConvert.DeserializeObject<WordInfo>(response, new JsonSerializerSettings { ContractResolver = new CamelCasePropertyNamesContractResolver() });
+        }
+        catch (Exception ex)
+        {
+            _log.LogError("({0}): " + ex.Message, System.Reflection.MethodBase.GetCurrentMethod().DeclaringType.Name);
+            return ":BAD:WORD:";
+        }
+
+        if (word.Word == null || !Regex.IsMatch(word.Word, @"^[a-zA-Z-' ]*$"))
+        {
+            string bw = "BAD WORD: " + word.Word + ". I'll try next word to take.";
+            _log.LogError(bw);
+            return ":BAD:WORD:";
+        }
+
+        return word.Word;
     }
 }

@@ -1,9 +1,8 @@
 ﻿using GetWordsAndExplanationFromWordnik.Models;
 
-namespace GetWordsAndExplanationFromWordnik
+namespace GetWordsAndExplanationFromWordnik;
+
+public interface IListOfWordsExplanation
 {
-    public interface IListOfWordsExplanation
-    {
-        Task<List<Explanation>> GetExplanation(List<string>? lstr = null);
-    }
+    Task<List<Explanation>> GetExplanation(List<string>? lstr = null);
 }
