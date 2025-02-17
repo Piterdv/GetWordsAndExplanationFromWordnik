@@ -1,18 +1,15 @@
-﻿using System.Text;
+﻿using System.Reflection;
+using System.Text;
 
 namespace GetWordsAndExplanationFromWordnik;
 
 public static class Helpers
 {
-    /// <summary>
-    /// Zasadniczo usuwa tagi html z tekstu (<>) i zamienia je na cudzysłowy - na potrzeby wordnik'a.
-    /// </summary>
-    /// <param name="str"></param>
-    /// <returns></returns>
-    public static string ParseStringFromHtml(string str)
+
+    public static string ParseStringInOddWordnikHtml(string str)
     {
 
-        StringBuilder sb = new StringBuilder();
+        StringBuilder sb = new();
 
         bool toQuotation = false;
 
@@ -37,25 +34,23 @@ public static class Helpers
         return sb.ToString();
     }
 
-    /// <summary>
-    /// Pobieram tylko nazwę metody i błąd.
-    /// </summary>
-    /// <param name="ex"></param>
-    /// <returns></returns>
+
     public static string GetMethodNameAndError(Exception ex)
     {
-        string mn = string.Empty;
-        mn += ("({0}): " + ex.Message, System.Reflection.MethodBase.GetCurrentMethod().DeclaringType.Name);
-        return mn;
+        string methodNameAndError = string.Empty;
+        var declaringType = MethodBase.GetCurrentMethod()?.DeclaringType?.Name ?? "Unknown type";
+        methodNameAndError += $"({declaringType}): {ex.Message}";
+        return methodNameAndError;
     }
 
-    /// <summary>
-    /// Zamienia listę stringów na jeden string, gdzie elementy listy są oddzielone znakiem "|".
-    /// </summary>
-    /// <param name="lst"></param>
-    /// <returns></returns>
-    public static string GetListAsString(List<string> lst)
+
+    public static string GetStringsAsOneString(List<string> lst)
     {
         return lst.Aggregate((i, j) => i + " | " + j);
+    }
+
+    public static string GetCurrentMethodName()
+    {
+        return System.Reflection.MethodBase.GetCurrentMethod()?.DeclaringType?.Name ?? "UnknownType";
     }
 }

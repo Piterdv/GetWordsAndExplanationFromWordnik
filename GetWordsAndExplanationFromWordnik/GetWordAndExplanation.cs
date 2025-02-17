@@ -18,17 +18,17 @@ public class GetWordAndExplanation
 
     public Explanation GetWordAndExplanationOut()
     {
-        List<string> l = new List<string>();
+        List<string> word = new();
 
         try
         {
-            l = _oneWord.GetWord(true).Result;
-            if(l.Contains("Error:"))
-                return new Explanation() { Text = new List<string> { l[0] }, Word = l[0] ?? "Error" };
-            if (l.Contains("ErrorTMR:"))
+            word = _oneWord.GetWord(true).Result;
+            if(word.Contains("Error:"))
+                return new Explanation() { Text = new List<string> { word[0] }, Word = word[0] ?? "Error" };
+            if (word.Contains("ErrorTMR:"))
                 return new Explanation() { Text = new List<string> { "Wait a moment before you try new game again, too may request, sorry:)" }, Word = "ErrorTMR" };
 
-            Explanation exp = _explanation.GetExplanation(l).Result[0];
+            Explanation exp = _explanation.GetExplanation(word).Result[0];
             
             _logger.LogInformation(">>>OK:)");
             
@@ -36,8 +36,8 @@ public class GetWordAndExplanation
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex.Message);
-            return new Explanation() { Text = new List<string> { "Error" }, Word = l[0] ?? "Error" };
+            _logger.LogError("{error}", ex.Message);
+            return new Explanation() { Text = new List<string> { "Error" }, Word = word[0] ?? "Error" };
         }
     }
 

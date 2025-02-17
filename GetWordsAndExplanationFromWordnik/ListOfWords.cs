@@ -9,10 +9,9 @@ namespace GetWordsAndExplanationFromWordnik;
 
 public class ListOfWords : IListOfWords
 {
-    //muszę inicjować HttpClienta bo muszę odświeżać połączenie co minutę?
-    //https://stackoverflow.com/questions/40187153/httpclient-getasync-never-returns-when-using-await-async
-    //użyj tylko raz, bo inaczej dostaniesz wyjątek?
-    private static HttpClient client = new HttpClient();
+    // Reference: https://stackoverflow.com/questions/40187153/httpclient-getasync-never-returns-when-using-await-async
+    // Use a single instance of HttpClient to avoid socket exhaustion and improve performance.
+    private static readonly HttpClient client = new();
 
     private readonly ILogger<ListOfWords> _log;
     private readonly IConfiguration _config;
@@ -25,68 +24,92 @@ public class ListOfWords : IListOfWords
 
     public async Task<List<string>> GetWord(bool onlyOneWord = false)
     {
-
         var wordList = new List<string>();
 
         try
         {
-            string apiKey = _config.GetValue<string>("ApiKey") ?? MyAppData.ApiKey;
-
-            string path =
-                _config.GetValue<string>("BaseAddressOfWordnikWordsApi")
-                + _config.GetValue<string>("ApiPathForAskingOfWordFromWordnik")
-                + apiKey;
+            string path = BuildApiPath();
 #if DEBUG
-            _log.LogInformation("Path: " + path);
+            _log.LogInformation("Path: {Path}", path);
 #endif
 
             int howManyWords = onlyOneWord ? 1 : _config.GetValue<int>("HowManyWordsGet");
             int notToMuchBadWords = 0;
 
-            for (int i = 0; i < howManyWords; i++) //max 9 in free version of API of wordnik
+            for (int i = 0; i < howManyWords; i++)
             {
                 var response = await client.GetAsync(path);
 
                 if (response.IsSuccessStatusCode)
                 {
-                    string responseString = await response.Content.ReadAsStringAsync();
-                    string word = ParseWord(responseString);
+                    var result = await HandleSuccessResponse(response, notToMuchBadWords, i);
+                    string word = result.Item1;
+                    notToMuchBadWords = result.Item2;
+                    i = result.Item3;
 
-                    if (word.Contains(":BAD:WORD:") && notToMuchBadWords < 5)
-                    {
-                        notToMuchBadWords++;
-                        i--;
-                        continue;
-                    }
-
-                    if (word != null)
+                    if (!string.IsNullOrEmpty(word))
                     {
                         wordList.Add(word);
-                        _log.LogInformation("Word: " + word);
                     }
-                }
-                else if (response.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
-                {
-                    _log.LogError("ErrorTMR: " + response.StatusCode);
-                    wordList.Add("ErrorTMR: " + response.StatusCode);
                 }
                 else
                 {
-                    _log.LogError("Error: " + response.StatusCode);
-                    wordList.Add("Error: " + response.StatusCode);
+                    HandleErrorResponse(response, wordList);
                 }
             }
         }
-        catch (HttpRequestException e)
+        catch (HttpRequestException ex)
         {
-            _log.LogError(e.Message);
+            _log.LogError("{Error}", ex.Message);
         }
         catch (Exception ex)
         {
-            _log.LogError(ex.Message);
+            _log.LogError("{Error}", ex.Message);
         }
 
         return wordList;
+    }
+
+    private string BuildApiPath()
+    {
+        string apiKey = _config.GetValue<string>("ApiKey") ?? MyAppData.ApiKey;
+        return _config.GetValue<string>("BaseAddressOfWordnikWordsApi")
+               + _config.GetValue<string>("ApiPathForAskingOfWordFromWordnik")
+               + apiKey;
+    }
+
+    private async Task<Tuple<string, int, int>> HandleSuccessResponse(HttpResponseMessage response, int notToMuchBadWords, int i)
+    {
+        string responseString = await response.Content.ReadAsStringAsync();
+        string word = ParseWord(responseString);
+
+        if (word.Contains(":BAD:WORD:") && notToMuchBadWords < 5)
+        {
+            notToMuchBadWords++;
+            i--;
+            return new Tuple<string, int, int>(string.Empty, notToMuchBadWords, i);
+        }
+
+        if (!string.IsNullOrEmpty(word))
+        {
+            _log.LogInformation("Word: {Word}", word);
+        }
+
+        return new Tuple<string, int, int>(word, notToMuchBadWords, i);
+    }
+
+    private void HandleErrorResponse(HttpResponseMessage response, List<string> wordList)
+    {
+        if (response.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
+        {
+            _log.LogError("ErrorTMR: {Response}", response.StatusCode);
+            wordList.Add("ErrorTMR: " + response.StatusCode);
+        }
+        else
+        {
+            _log.LogError("Error: {Response}", response.StatusCode);
+            wordList.Add("Error: " + response.StatusCode);
+        }
     }
 
     private string ParseWord(string response)
@@ -99,14 +122,19 @@ public class ListOfWords : IListOfWords
         }
         catch (Exception ex)
         {
-            _log.LogError("({0}): " + ex.Message, System.Reflection.MethodBase.GetCurrentMethod().DeclaringType.Name);
+            _log.LogError("{Error} {Type}", ex.Message, Helpers.GetCurrentMethodName());
             return ":BAD:WORD:";
         }
 
-        if (word.Word == null || !Regex.IsMatch(word.Word, @"^[a-zA-Z-' ]*$"))
+        word ??= new WordInfo()
         {
-            string bw = "BAD WORD: " + word.Word + ". I'll try next word to take.";
-            _log.LogError(bw);
+            Word = ":BAD:WORD:"
+        };
+
+        if (word.Word == ":BAD:WORD:" || !Regex.IsMatch(word.Word, @"^[a-zA-Z-' ]*$"))
+        {
+            string badWord = "BAD WORD: " + word.Word + ". I'll try next word to take.";
+            _log.LogError("{BadWord}", badWord);
             return ":BAD:WORD:";
         }
 

@@ -1,23 +1,16 @@
-﻿//DI, Serilog, Settings :)
-using GetWordsAndExplanationFromWordnik;
-using GetWordsAndExplanationFromWordnik.Models;
+﻿using GetWordsAndExplanationFromWordnik.Models;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Serilog;
 using System.Reflection;
 
-public class GetWordAndExpl
-{
-    //add metod to instantiate httpclient for every request
-    //internal static HttpClient client = new HttpClient();
+namespace GetWordsAndExplanationFromWordnik;
 
-    /// <summary>
-    /// Metoda GetWAndE() jest wywoływana z TestyMyDllLibFromDll/Program.cs
-    /// </summary>
-    public Explanation GetWAndE() //string[] args
+public class WordnikRetriver
+{
+    public Explanation GetExplanation()
     {
-        //nowa configuracja z pliku appsettings.json dla Serilog
         var builder = new ConfigurationBuilder();
         BuildConfig(builder);
 
@@ -28,7 +21,7 @@ public class GetWordAndExpl
             .WriteTo.File("logs\\log.txt")
             .CreateLogger();
 
-        var assembly = Assembly.GetExecutingAssembly().GetName().Version.ToString();
+        var assembly = Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "Unknown version";
         Log.Logger.Information("----------->>>Starting LIB (R(" + assembly + "))");
 
         var host = Host.CreateDefaultBuilder()
@@ -40,12 +33,11 @@ public class GetWordAndExpl
             .UseSerilog()
             .Build();
 
-        var svc = ActivatorUtilities.CreateInstance<GetWordAndExplanation>(host.Services);
-        var expl = svc.GetWordAndExplanationOut();
-        return expl;
+        var wordnikService = ActivatorUtilities.CreateInstance<GetWordAndExplanation>(host.Services);
+        var explanation = wordnikService.GetWordAndExplanationOut();
+        return explanation;
     }
 
-    //appsettings.json + more
     static void BuildConfig(IConfigurationBuilder builder)
     {
         builder.SetBasePath(Directory.GetCurrentDirectory())

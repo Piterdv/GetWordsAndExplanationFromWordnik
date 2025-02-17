@@ -3,15 +3,14 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
-using Serilog;
+using System.Net;
 using System.Text;
 
 namespace GetWordsAndExplanationFromWordnik;
 
 public class ListOfWordsExplanation : IListOfWordsExplanation
 {
-    private static readonly HttpClient client = new HttpClient();
-
+    private static readonly HttpClient client = new();
     private readonly ILogger<ListOfWordsExplanation> _log;
     private readonly IConfiguration _config;
 
@@ -21,16 +20,30 @@ public class ListOfWordsExplanation : IListOfWordsExplanation
         _config = config;
     }
 
-    public async Task<List<Explanation>> GetExplanation(List<string>? lstr = null)
+    public async Task<List<Explanation>> GetExplanation(List<string>? inputWords = null)
     {
-        List<string> words = new List<string>();
+        List<string> words = GetInterestingWords(inputWords);
 
-        if (lstr != null)
-            words = lstr.Where(w => w.Length < _config.GetValue<int>("MaxWordLength")).ToList();
+        var selectedWords = InitializeSelectedWords(words);
+
+        List<Explanation> explanations = await GetAllExplanations(words, selectedWords);
+
+        return explanations;
+    }
+
+    private List<string> GetInterestingWords(List<string>? inputWords)
+    {
+        List<string> words;
+        if (inputWords != null)
+            words = inputWords.Where(w => w.Length < _config.GetValue<int>("MaxWordLength")).ToList();
         else
-            words = File.ReadAllLines("words.txt").Where(word => word.Length < MyAppData.MaxWordLength).ToList();
+            words = File.ReadAllLines("words.text").Where(word => word.Length < MyAppData.MaxWordLength).ToList();
+        return words;
+    }
 
-        List<string> selectedWords = new List<string>();
+    private static List<string> InitializeSelectedWords(List<string> words)
+    {
+        List<string> selectedWords = new();
 
         if (words.Count > 1)
         {
@@ -43,195 +56,207 @@ public class ListOfWordsExplanation : IListOfWordsExplanation
             selectedWords.Add(words[0]);
         }
 
+        return selectedWords;
+    }
+
+    private async Task<List<Explanation>> GetAllExplanations(List<string> words, List<string> selectedWords)
+    {
         var explanations = new List<Explanation>();
         int howManyRequests = 0;
 
         foreach (var word in selectedWords)
         {
-            string apiKey = _config.GetValue<string>("ApiKey") ?? MyAppData.ApiKey;
-
-            string path =
-                _config.GetValue<string>("BaseAddressOfWordnikExplanationApi")
-                + "/" + word
-                + _config.GetValue<string>("ApiPathForAskingOfExplanationFromWordnik")
-                + apiKey;
+            string path = BuildApiPath(word);
 
 #if DEBUG
-            _log.LogInformation("Path: " + path);
+            _log.LogInformation("Path: {Path}", path);
 #endif
 
             var response = await client.GetAsync(path);
-
             howManyRequests++;
 
             if (response.IsSuccessStatusCode)
             {
-                var responseString = await response.Content.ReadAsStringAsync();
-                var explan = ParseExplanation(responseString, word);
-                if (!explan.Text.Contains("ERROR:"))
+                var explanation = await HandleSuccessResponse(response, word, howManyRequests);
+                if (explanation != null)
                 {
-                    explanations.Add(explan);
+                    explanations.Add(explanation);
                 }
-
-                _log.LogInformation($"{howManyRequests}.\t{explan.Word} - {Helpers.GetListAsString(explan.Text)} | {explan.PartOfSpeech} | {explan.Citations[0].Cite} | {Helpers.GetListAsString(explan.ExampleUses)}");
             }
             else
             {
-                if (response.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
+                if (HandleErrorResponse(response, word, howManyRequests, explanations))
                 {
-                    _log.LogError($"Too many requests: {howManyRequests}");
                     break;
-                }
-                else if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
-                {
-                    _log.LogWarning($"Brak definicji w słowniku!");
-                    explanations.Add(new Explanation()
-                    {
-                        Word = word,
-                        Text = new List<string> { "Brak definicji w słowniku!(" }
-                    });
-                    if (words.Count > 1) continue;
-                }
-                else
-                {
-                    explanations.Add(new Explanation()
-                    {
-                        Word = word,
-                        Text = new List<string> { "Problem z pobieraniem definicji słowa:(" }
-                    });
-                    _log.LogWarning("Problem z pobieraniem definicji słowa: ", word);
                 }
             }
         }
 
         return explanations;
+    }
 
+    private string BuildApiPath(string word)
+    {
+        string apiKey = _config.GetValue<string>("ApiKey") ?? MyAppData.ApiKey;
+        return _config.GetValue<string>("BaseAddressOfWordnikExplanationApi")
+               + "/" + word
+               + _config.GetValue<string>("ApiPathForAskingOfExplanationFromWordnik")
+               + apiKey;
+    }
+
+    private async Task<Explanation?> HandleSuccessResponse(HttpResponseMessage response, string word, int howManyRequests)
+    {
+        var responseString = await response.Content.ReadAsStringAsync();
+        var explanation = ParseExplanation(responseString, word);
+        if (!explanation.Text.Contains("ERROR:"))
+        {
+            _log.LogInformation("{RequestNumber}.\t{Word} - {Text} | {PartOfSpeech} | {Cite} | {ExampleUses}",
+                howManyRequests, explanation.Word, Helpers.GetStringsAsOneString(explanation.Text), explanation.PartOfSpeech, explanation.Citations[0].Cite, Helpers.GetStringsAsOneString(explanation.ExampleUses));
+            return explanation;
+        }
+        return null;
+    }
+
+    private bool HandleErrorResponse(HttpResponseMessage response, string word, int howManyRequests, List<Explanation> explanations)
+    {
+        if (response.StatusCode == HttpStatusCode.TooManyRequests)
+        {
+            _log.LogError("Too many requests: {RequestNumber}", howManyRequests);
+            return true;
+        }
+        else if (response.StatusCode == HttpStatusCode.NotFound)
+        {
+            _log.LogWarning("No definition found in the dictionary!");
+            explanations.Add(new Explanation()
+            {
+                Word = word,
+                Text = new List<string> { "No definition found in the dictionary!" }
+            });
+        }
+        else
+        {
+            explanations.Add(new Explanation()
+            {
+                Word = word,
+                Text = new List<string> { "Problem fetching the word definition:(" }
+            });
+            _log.LogWarning("Problem fetching the word definition: {Word}", word);
+        }
+        return false;
     }
 
     private Explanation ParseExplanation(string response, string word)
     {
-        response = response.Replace("(", "").Replace(")", "").Replace(";", "").Replace("/**/", "").Replace("/**", "").Replace("*/", "").Replace("/*", "").Replace("/**/", "").Replace("/**", "").Replace("*/", "").Replace("/*", "").Replace("/**/", "").Replace("/**", "").Replace("*/", "").Replace("/*", "").Replace("/**/", "").Replace("/**", "").Replace("*/", "").Replace("/*", "").Replace("/**/", "").Replace("/**", "").Replace("*/", "").Replace("/*", "").Replace("/**/", "").Replace("/**", "").Replace("*/", "").Replace("/*", "").Replace("/**/", "").Replace("/**", "").Replace("*/", "").Replace("/*", "");
+        response = CleanResponseString(response);
         response = Encoding.UTF8.GetString(Encoding.Default.GetBytes(response));
 
-        List<Explanation>? explanation = new List<Explanation>();
+        List<Explanation>? explanation;
 
         try
         {
-            //uno paranoja z labels - wycinam bo za dużo problemów - różne typy w API
-            if (response.Contains("\"labels\":[{"))
-            {
-                int start = response.IndexOf("\"labels\":");
-                int end = response.IndexOf("\"word\":");
-                response = response.Remove(start, end - start);
-            }
-
-            if (response.Contains("\"sequence\":")) //??"sequence":"1","score":0
-            {
-                int start = response.IndexOf("\"sequence\":");
-                int end = response.IndexOf("\"word\":");
-                response = response.Remove(start, end - start);
-            }
-
-            if (response.Contains("\"exampleUses\":[{"))
-            {
-                int start = response.IndexOf("\"exampleUses\":");
-                int end = response.IndexOf("\"attributionUrl\":");
-                response = response.Remove(start, end - start);
-            }
-
-            //duo paranoja - raz text w API jest jako string a innym razem jako List<string> - dlatego takie "obejście"
-            if (!response.Contains("\"text\":["))
-            {
-                response = response.Replace("\"text\":", "\"text\":[");
-                response = response.Replace(",\"word\":", "],\"word\":");
-            }
-
-            explanation = JsonConvert.DeserializeObject<List<Explanation>>(response, new JsonSerializerSettings { ContractResolver = new CamelCasePropertyNamesContractResolver() });
-
+            explanation = DeserializeExplanation(response);
         }
         catch (Exception ex)
         {
-            _log.LogError(word);
-            _log.LogError("({0}): " + ex.Message, System.Reflection.MethodBase.GetCurrentMethod().DeclaringType.Name);
-            _log.LogError(response);
-            return new Explanation()
-            {
-                Word = word,
-                Text = new List<string> { $"ERROR: {ex.Message}" }
-            };
+            LogError(word, ex, response);
+            return CreateErrorExplanation(word, ex.Message);
         }
 
         if (explanation == null)
         {
-            return new Explanation()
-            {
-                Word = word,
-                Text = new List<string> { "Brak definicji - problem z pobieraniem definicji słowa:(" }
-            };
+            return CreateErrorExplanation(word, "There are some problems with getting deffinition of the word;(");
         }
 
-        List<string> txt = new List<string>();
-        if (explanation[0].Text != null && explanation[0].Text.Count > 0)
+        return CreateExplanation(word, explanation[0]);
+    }
+
+    private static string CleanResponseString(string response)
+    {
+        response = response.Replace("(", "").Replace(")", "").Replace(";", "").Replace("/**/", "").Replace("/**", "").Replace("*/", "").Replace("/*", "");
+        if (response.Contains("\"labels\":[{"))
         {
-            foreach (var item in explanation[0].Text)
-            {
-                txt.Add(Helpers.ParseStringFromHtml(item));
-            }
-        }
-        else
-        {
-            txt.Add("There's no explanation...");
+            int start = response.IndexOf("\"labels\":");
+            int end = response.IndexOf("\"word\":");
+            response = response.Remove(start, end - start);
         }
 
-        List<string> eou = new List<string>();
-        if (explanation[0].ExampleUses != null && explanation[0].ExampleUses.Count > 0)
+        if (response.Contains("\"sequence\":"))
         {
-            foreach (var item in explanation[0].ExampleUses)
-            {
-                eou.Add(Helpers.ParseStringFromHtml(item));
-            }
-        }
-        else
-        {
-            eou.Add("No example of uses...");
+            int start = response.IndexOf("\"sequence\":");
+            int end = response.IndexOf("\"word\":");
+            response = response.Remove(start, end - start);
         }
 
-        string pos = explanation[0].PartOfSpeech != "" ? explanation[0].PartOfSpeech : "Unknown part of Speech...";
+        if (response.Contains("\"exampleUses\":[{"))
+        {
+            int start = response.IndexOf("\"exampleUses\":");
+            int end = response.IndexOf("\"attributionUrl\":");
+            response = response.Remove(start, end - start);
+        }
 
-        List<Citation> cit = new List<Citation>();
-        if (explanation[0].Citations != null && explanation[0].Citations.Count > 0)
+        if (!response.Contains("\"text\":["))
         {
-            foreach (var item in explanation[0].Citations)
-            {
-                Citation c = new Citation();
-                c.Source = item.Source;
-                c.Cite = Helpers.ParseStringFromHtml(item.Cite);
-                cit.Add(c);
-            }
+            response = response.Replace("\"text\":", "\"text\":[");
+            response = response.Replace(",\"word\":", "],\"word\":");
         }
-        else
+
+        return response;
+    }
+
+    private static List<Explanation>? DeserializeExplanation(string response)
+    {
+        return JsonConvert.DeserializeObject<List<Explanation>>
+            (response, new JsonSerializerSettings { ContractResolver = new CamelCasePropertyNamesContractResolver() });
+    }
+
+    private void LogError(string word, Exception ex, string response)
+    {
+        _log.LogError("{word}", word);
+        _log.LogError("{TypeName}: {error}", Helpers.GetCurrentMethodName(), ex.Message);
+        _log.LogError("{response}", response);
+    }
+
+
+
+    private static Explanation CreateErrorExplanation(string word, string errorMessage)
+    {
+        return new Explanation()
         {
-            Citation c = new Citation();
-            c.Source = "?";
-            c.Cite = "There's no cite...";
-            cit.Add(c);
-        }
+            Word = word,
+            Text = new List<string> { $"ERROR: {errorMessage}" }
+        };
+    }
+
+    private static Explanation CreateExplanation(string word, Explanation explanation)
+    {
+        List<string> text = explanation.Text != null && explanation.Text.Count > 0
+            ? explanation.Text.Select(Helpers.ParseStringInOddWordnikHtml).ToList()
+            : new List<string> { "There's no explanation..." };
+
+        List<string> examleOfUses = explanation.ExampleUses != null && explanation.ExampleUses.Count > 0
+            ? explanation.ExampleUses.Select(Helpers.ParseStringInOddWordnikHtml).ToList()
+            : new List<string> { "No example of uses..." };
+
+        string pos = !string.IsNullOrEmpty(explanation.PartOfSpeech) ? explanation.PartOfSpeech : "Unknown part of Speech...";
+
+        List<Citation> citations = explanation.Citations != null && explanation.Citations.Count > 0
+            ? explanation.Citations.Select(item => new Citation { Source = item.Source, Cite = Helpers.ParseStringInOddWordnikHtml(item.Cite) }).ToList()
+            : new List<Citation> { new() { Source = "?", Cite = "There's no cite..." } };
 
         return new Explanation()
         {
             Word = word,
-            Text = txt,
-            TextProns = explanation[0].TextProns,
-            SourceDictionary = explanation[0].SourceDictionary,
-            AttributionText = explanation[0].AttributionText,
+            Text = text,
+            TextProns = explanation.TextProns,
+            SourceDictionary = explanation.SourceDictionary,
+            AttributionText = explanation.AttributionText,
             PartOfSpeech = pos,
-            Score = explanation[0].Score,
-            SeqString = explanation[0].SeqString,
-            Sequence = explanation[0].Sequence,
-            ExampleUses = eou,
-            RelatedWords = explanation[0].RelatedWords,
-            Citations = cit,
+            Score = explanation.Score,
+            SeqString = explanation.SeqString,
+            Sequence = explanation.Sequence,
+            ExampleUses = examleOfUses,
+            RelatedWords = explanation.RelatedWords,
+            Citations = citations,
         };
-
     }
 }

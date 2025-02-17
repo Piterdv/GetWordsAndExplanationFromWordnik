@@ -1,15 +1,12 @@
-﻿//DI, Serilog, Settings :)
-using GetWordsAndExplanationFromWordnik;
+﻿using GetWordsAndExplanationFromWordnik;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Serilog;
 
+//Zasadniczo na potrzeby przełączenia exe <-> lib i szybkich testów
 internal class Program
 {
-    //add metod to instantiate httpclient for every request
-    //internal static HttpClient client = new HttpClient();
-
     private static void Main(string[] args)
     {
         //nowa configuracja z pliku appsettings.json dla Serilog

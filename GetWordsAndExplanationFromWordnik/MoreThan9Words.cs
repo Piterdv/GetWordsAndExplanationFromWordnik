@@ -23,10 +23,10 @@ public class MoreThan9Words
     /// <returns></returns>
     public async Task<List<string>> GetMoreThen9Words(bool moreThan9 = true)
     {
-        List<string> words = new List<string>();
+        List<string> words = new();
         int count = 0;
 
-        int howManyWords = moreThan9 ? _config.GetValue<int>("HowManyWordsGet") : 1; 
+        int howManyWords = moreThan9 ? _config.GetValue<int>("HowManyWordsGet") : 1;
 
         for (int i = 0; i < howManyWords; i++)
         {
@@ -37,7 +37,6 @@ public class MoreThan9Words
             foreach (var item in result)
             {
                 words.Add(item);
-                //Console.WriteLine(item);
             }
 
             if (count >= _config.GetValue<int>("HowManyWordsGet")) break;
